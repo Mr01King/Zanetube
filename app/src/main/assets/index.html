@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZaneTube</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101116;color:#f4f4f7;font:15px Arial,sans-serif}
+header{padding:22px 18px;background:#191a22;position:sticky;top:0}h1{margin:0;color:#b7a3ff;font-size:25px}
+main{padding:18px;max-width:760px;margin:auto}.card{background:#1b1d27;border:1px solid #303241;border-radius:18px;padding:16px;margin:14px 0}
+input{width:100%;padding:14px;border-radius:10px;border:1px solid #45475a;background:#101116;color:white;margin:8px 0}
+button{border:0;border-radius:12px;padding:12px 16px;background:#8065df;color:white;font-weight:bold;margin:5px 4px 5px 0}
+.note{color:#b7b7c6;line-height:1.5;font-size:13px}.video{width:100%;aspect-ratio:16/9;border:0;border-radius:12px;background:#000}
+</style></head><body>
+<header><h1>▶ ZaneTube</h1><div class="note">Streaming • Mini bubble • Audio player</div></header>
+<main>
+<section class="card"><h3>Putar video YouTube</h3><input id="yt" placeholder="Tempel URL atau ID video YouTube">
+<button onclick="playYT()">Putar video</button><div id="frame"></div>
+<p class="note">Video diputar melalui YouTube Embed resmi. Pemutaran di latar belakang untuk video YouTube tidak dijamin dan mengikuti batasan YouTube.</p></section>
+<section class="card"><h3>Background audio</h3><input id="audio" placeholder="URL audio langsung (MP3/AAC/stream legal)">
+<button onclick="playAudio()">Putar audio</button><button onclick="bubble()">Aktifkan bubble</button>
+<p class="note">Audio latar belakang memakai pemutar Android dan membutuhkan URL audio langsung yang kamu punya izin untuk gunakan.</p></section>
+<section class="card"><h3>Catatan</h3><p class="note">Versi starter. Bubble saat ini membuka kembali ZaneTube. Kontrol mini-player, playlist, pencarian katalog, dan pemilih file lokal masih perlu dikembangkan.</p></section>
+</main>
+<script>
+function getId(s){s=s.trim();let m=s.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);return m?m[1]:(/^[\w-]{11}$/.test(s)?s:null)}
+function playYT(){let id=getId(document.getElementById('yt').value);if(!id){alert('Masukkan URL atau ID video YouTube yang valid.');return}
+document.getElementById('frame').innerHTML='<iframe class="video" src="https://www.youtube-nocookie.com/embed/'+id+'" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>'}
+function playAudio(){let u=document.getElementById('audio').value.trim();if(!/^https:\/\//i.test(u)){alert('Masukkan URL HTTPS audio langsung.');return}if(window.Android)Android.playAudio(u);else alert('Fitur ini tersedia di APK Android.')}
+function bubble(){if(window.Android)Android.showBubble();else alert('Bubble tersedia di APK Android.')}
+</script></body></html>
