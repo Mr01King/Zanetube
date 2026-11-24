@@ -1,28 +1,186 @@
 <!doctype html>
 <html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <title>ZaneTube</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#101116;color:#f4f4f7;font:15px Arial,sans-serif}
-header{padding:22px 18px;background:#191a22;position:sticky;top:0}h1{margin:0;color:#b7a3ff;font-size:25px}
+header{padding:22px 18px;background:#191a22;position:sticky;top:0;z-index:1}h1{margin:0;color:#b7a3ff;font-size:25px}
 main{padding:18px;max-width:760px;margin:auto}.card{background:#1b1d27;border:1px solid #303241;border-radius:18px;padding:16px;margin:14px 0}
-input{width:100%;padding:14px;border-radius:10px;border:1px solid #45475a;background:#101116;color:white;margin:8px 0}
-button{border:0;border-radius:12px;padding:12px 16px;background:#8065df;color:white;font-weight:bold;margin:5px 4px 5px 0}
-.note{color:#b7b7c6;line-height:1.5;font-size:13px}.video{width:100%;aspect-ratio:16/9;border:0;border-radius:12px;background:#000}
+input{width:100%;padding:14px;border-radius:10px;border:1px solid #45475a;background:#101116;color:white;margin:8px 0;font-size:15px}
+button{border:0;border-radius:12px;padding:12px 16px;background:#8065df;color:white;font-weight:bold;margin:5px 4px 5px 0;cursor:pointer}
+button.secondary{background:#34364a}
+.note{color:#b7b7c6;line-height:1.5;font-size:13px}.video{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:12px;background:#000}
+.msg{font-size:13px;min-height:1em;margin:4px 0;color:#ff9aa8}.msg.ok{color:#9be7b4}audio{width:100%;margin-top:8px}
+.android-only{display:none}body.is-android .android-only{display:inline-block}body.is-android .web-only{display:none}
+
+/* Player + floating mini player (bubble mode) */
+.player{margin-top:8px}
+.player .bar{display:none}
+.player.floating{position:fixed;right:12px;bottom:12px;width:min(340px,82vw);z-index:50;margin:0;padding:6px;
+  background:#1b1d27;border:1px solid #5a4bb0;border-radius:16px;box-shadow:0 12px 32px #000a}
+.player.floating .bar{display:flex;align-items:center;gap:6px;padding:0 2px 6px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.player.floating .bar span{flex:1;font-size:12px;font-weight:bold;color:#b7a3ff}
+.player.floating .bar button{margin:0;padding:6px 10px;font-size:13px;border-radius:9px}
+.player.floating.dragging .video{pointer-events:none}
+.placeholder{display:none;align-items:center;justify-content:center;aspect-ratio:16/9;border:1px dashed #45475a;border-radius:12px;color:#b7b7c6;font-size:13px;margin-top:8px}
+.placeholder.show{display:flex}
+
+/* Android Picture-in-Picture: show only the video */
+body.pip{background:#000;overflow:hidden}
+body.pip *{visibility:hidden}
+body.pip #player,body.pip #player #frame,body.pip #player #frame *{visibility:visible}
+body.pip #player{position:fixed;inset:0;width:auto;margin:0;padding:0;border:0;border-radius:0;z-index:99;background:#000}
+body.pip #player .bar{display:none}
+body.pip .video{width:100vw;height:100vh;aspect-ratio:auto;border-radius:0}
 </style></head><body>
 <header><h1>▶ ZaneTube</h1><div class="note">Streaming • Mini bubble • Audio player</div></header>
 <main>
-<section class="card"><h3>Putar video YouTube</h3><input id="yt" placeholder="Tempel URL atau ID video YouTube">
-<button onclick="playYT()">Putar video</button><div id="frame"></div>
+<section class="card"><h3>Putar video YouTube</h3>
+<form id="ytForm"><input id="yt" inputmode="url" autocomplete="off" placeholder="Tempel URL atau ID video YouTube">
+<button type="submit">Putar video</button></form>
+<div id="ytMsg" class="msg" role="status"></div>
+<div id="player" class="player" hidden>
+  <div class="bar" id="playerBar"><span>▶ ZaneTube mini</span>
+    <button type="button" class="secondary" id="dockBtn" title="Kembalikan ke halaman">⤢</button>
+    <button type="button" class="secondary" id="closeBtn" title="Tutup video">✕</button></div>
+  <div id="frame"></div>
+</div>
+<div id="placeholder" class="placeholder">Video sedang diputar di mini player mengambang</div>
+<div id="playerTools" hidden>
+  <button type="button" id="floatBtn">Mini player mengambang</button>
+  <button type="button" class="android-only" id="pipBtn">Picture-in-Picture</button>
+</div>
 <p class="note">Video diputar melalui YouTube Embed resmi. Pemutaran di latar belakang untuk video YouTube tidak dijamin dan mengikuti batasan YouTube.</p></section>
-<section class="card"><h3>Background audio</h3><input id="audio" placeholder="URL audio langsung (MP3/AAC/stream legal)">
-<button onclick="playAudio()">Putar audio</button><button onclick="bubble()">Aktifkan bubble</button>
-<p class="note">Audio latar belakang memakai pemutar Android dan membutuhkan URL audio langsung yang kamu punya izin untuk gunakan.</p></section>
-<section class="card"><h3>Catatan</h3><p class="note">Versi starter. Bubble saat ini membuka kembali ZaneTube. Kontrol mini-player, playlist, pencarian katalog, dan pemilih file lokal masih perlu dikembangkan.</p></section>
+
+<section class="card"><h3>Background audio &amp; bubble</h3>
+<form id="audioForm"><input id="audio" inputmode="url" autocomplete="off" placeholder="URL audio langsung (MP3/AAC/stream legal)">
+<button type="submit">Putar audio</button><button type="button" class="secondary" id="stopBtn">Stop</button><button type="button" id="bubbleBtn">Aktifkan bubble</button></form>
+<div id="audioMsg" class="msg" role="status"></div>
+<audio id="webAudio" class="web-only" controls preload="none" hidden></audio>
+<p class="note android-only">Bubble muncul di atas aplikasi lain: geser untuk memindahkan, ketuk untuk membuka ZaneTube, tekan lama atau pakai notifikasinya untuk menutup. Saat pertama kali, izinkan “Tampilkan di atas aplikasi lain”, lalu kembali ke ZaneTube.</p>
+<p class="note web-only">Di browser, bubble berupa mini player mengambang yang tetap terlihat saat halaman digulir. Bubble di atas aplikasi lain hanya tersedia di APK Android.</p></section>
+
+<section class="card"><h3>Catatan</h3><p class="note">Versi starter. Playlist, pencarian katalog, dan pemilih file lokal masih perlu dikembangkan.</p></section>
 </main>
 <script>
-function getId(s){s=s.trim();let m=s.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);return m?m[1]:(/^[\w-]{11}$/.test(s)?s:null)}
-function playYT(){let id=getId(document.getElementById('yt').value);if(!id){alert('Masukkan URL atau ID video YouTube yang valid.');return}
-document.getElementById('frame').innerHTML='<iframe class="video" src="https://www.youtube-nocookie.com/embed/'+id+'" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>'}
-function playAudio(){let u=document.getElementById('audio').value.trim();if(!/^https:\/\//i.test(u)){alert('Masukkan URL HTTPS audio langsung.');return}if(window.Android)Android.playAudio(u);else alert('Fitur ini tersedia di APK Android.')}
-function bubble(){if(window.Android)Android.showBubble();else alert('Bubble tersedia di APK Android.')}
+const isAndroid = typeof window.Android !== 'undefined';
+if (isAndroid) document.body.classList.add('is-android');
+const $ = id => document.getElementById(id);
+function say(el, text, ok){ el.textContent = text || ''; el.classList.toggle('ok', !!ok); }
+
+function getId(input){
+  const s = input.trim();
+  if (/^[\w-]{11}$/.test(s)) return s;
+  let url;
+  try { url = new URL(/^https?:\/\//i.test(s) ? s : 'https://' + s); } catch { return null; }
+  const host = url.hostname.replace(/^(www\.|m\.|music\.)/, '');
+  let id = null;
+  if (host === 'youtu.be') id = url.pathname.split('/')[1];
+  else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+    id = url.searchParams.get('v');
+    if (!id) { const m = url.pathname.match(/^\/(?:embed|shorts|live|v)\/([\w-]{11})/); id = m && m[1]; }
+  }
+  return id && /^[\w-]{11}$/.test(id) ? id : null;
+}
+
+/* ---------- Video player ---------- */
+const player = $('player');
+function setVideoActive(active){ if (isAndroid && Android.setVideoActive) Android.setVideoActive(active); }
+
+$('ytForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const id = getId($('yt').value);
+  if (!id) { say($('ytMsg'), 'Masukkan URL atau ID video YouTube yang valid.'); return; }
+  say($('ytMsg'));
+  const f = document.createElement('iframe');
+  f.className = 'video';
+  f.src = 'https://www.youtube-nocookie.com/embed/' + id + '?playsinline=1&rel=0&autoplay=1';
+  f.title = 'Pemutar video YouTube';
+  f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+  f.referrerPolicy = 'strict-origin-when-cross-origin';
+  f.allowFullscreen = true;
+  $('frame').replaceChildren(f);
+  player.hidden = false;
+  $('playerTools').hidden = false;
+  setVideoActive(true);
+});
+
+function setFloating(on){
+  player.classList.toggle('floating', on);
+  $('placeholder').classList.toggle('show', on);
+  $('floatBtn').textContent = on ? 'Kembalikan ke halaman' : 'Mini player mengambang';
+  if (!on) { player.style.left = player.style.top = player.style.right = player.style.bottom = ''; }
+}
+window.closePlayer = function(){
+  setFloating(false);
+  $('frame').replaceChildren();
+  player.hidden = true;
+  $('playerTools').hidden = true;
+  setVideoActive(false);
+};
+$('floatBtn').addEventListener('click', () => setFloating(!player.classList.contains('floating')));
+$('dockBtn').addEventListener('click', () => { setFloating(false); player.scrollIntoView({behavior:'smooth', block:'center'}); });
+$('closeBtn').addEventListener('click', closePlayer);
+$('pipBtn').addEventListener('click', () => {
+  if (Android.enterPip && Android.enterPip() === 'ok') return;
+  say($('ytMsg'), 'Perangkat ini tidak mendukung Picture-in-Picture. Pakai mini player mengambang.');
+});
+
+// Drag the floating mini player by its top bar.
+(() => {
+  const bar = $('playerBar');
+  let sx, sy, ox, oy, id = null;
+  bar.addEventListener('pointerdown', e => {
+    if (e.target.closest('button') || !player.classList.contains('floating')) return;
+    const r = player.getBoundingClientRect();
+    sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top; id = e.pointerId;
+    bar.setPointerCapture(id);
+    player.classList.add('dragging');
+  });
+  bar.addEventListener('pointermove', e => {
+    if (e.pointerId !== id) return;
+    const r = player.getBoundingClientRect();
+    const x = Math.min(Math.max(0, ox + e.clientX - sx), innerWidth - r.width);
+    const y = Math.min(Math.max(0, oy + e.clientY - sy), innerHeight - r.height);
+    Object.assign(player.style, {left: x + 'px', top: y + 'px', right: 'auto', bottom: 'auto'});
+  });
+  const end = e => { if (e.pointerId !== id) return; id = null; player.classList.remove('dragging'); };
+  bar.addEventListener('pointerup', end);
+  bar.addEventListener('pointercancel', end);
+})();
+
+/* ---------- Audio ---------- */
+$('audioForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const u = $('audio').value.trim();
+  if (!/^https:\/\/\S+$/i.test(u)) { say($('audioMsg'), 'Masukkan URL HTTPS audio langsung.'); return; }
+  say($('audioMsg'));
+  if (isAndroid) { Android.playAudio(u); return; }
+  const a = $('webAudio');
+  a.hidden = false;
+  a.src = u;
+  a.play().catch(() => say($('audioMsg'), 'Audio tidak dapat diputar. Pastikan URL mengarah langsung ke file/stream audio.'));
+});
+$('webAudio').addEventListener('error', () => { if ($('webAudio').getAttribute('src')) say($('audioMsg'), 'Audio tidak dapat dimuat dari URL tersebut.'); });
+
+$('stopBtn').addEventListener('click', () => {
+  if (isAndroid) Android.stopAudio();
+  else { const a = $('webAudio'); a.pause(); a.removeAttribute('src'); a.load(); a.hidden = true; }
+});
+
+/* ---------- Bubble ---------- */
+$('bubbleBtn').addEventListener('click', () => {
+  if (isAndroid) {
+    const r = Android.showBubble();
+    if (r === 'started') say($('audioMsg'), 'Bubble aktif. Buka aplikasi lain, bubble tetap terlihat.', true);
+    else say($('audioMsg'), 'Izinkan “Tampilkan di atas aplikasi lain” untuk ZaneTube, lalu kembali ke sini. Bubble akan muncul otomatis.');
+    return;
+  }
+  if (player.hidden) { say($('audioMsg'), 'Putar video YouTube dulu, lalu tekan “Aktifkan bubble” untuk membuat mini player mengambang.'); return; }
+  setFloating(true);
+  say($('audioMsg'), 'Mini player mengambang aktif. Geser lewat bilah atasnya.', true);
+});
+
+// Called by the Android app when entering/leaving Picture-in-Picture.
+window.setPip = on => document.body.classList.toggle('pip', !!on);
 </script></body></html>

@@ -1,0 +1,11 @@
+# The web version of ZaneTube is the same page the Android app loads from its assets.
+# No build step is needed: Netlify publishes the static files as-is.
+[build]
+  publish = "app/src/main/assets"
+  command = ""
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
